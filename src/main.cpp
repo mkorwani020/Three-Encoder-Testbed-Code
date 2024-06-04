@@ -121,8 +121,8 @@ void get_simple_position(int j) {
           // 32-bit mode
           positiona = ((unsigned long)(buffer[1]) << 24 | (unsigned long)(buffer[2]) << 16 | (unsigned long)(buffer[3]) << 8 | (unsigned long)(buffer[4]));
           // Serial.print(position,BIN);
-          // Serial.print(position/pow(2,32)*360.0, 8);
-          // Serial.print(String(","));
+          Serial.print(positiona/pow(2,32)*360.0, 8);
+          Serial.print(String(","));
           // sprintf(out, "%lu, ", position);
           // Serial.print(out);
           break;
