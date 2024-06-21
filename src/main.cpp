@@ -128,16 +128,6 @@ double OffsetConvert(int pin, double pos) {
       // in this case, the subtraction would go negative
       // so we do an addition instead
       adj_ang = pos + (360.0 - offset[pin]);
-    
-      //new angle with the offset up to 8 digits
-      /*adj_ang = Display_Angle_Integer / 10000000;
-      adj_ang += (Display_Angle_Integer % 10000000) / 1000000;
-      adj_ang += (Display_Angle_Integer % 1000000) / 100000;
-      adj_ang += (Display_Angle_Integer % 100000) / 10000;
-      adj_ang += (Display_Angle_Integer % 10000) / 1000;
-      adj_ang += (Display_Angle_Integer % 1000) / 100;
-      adj_ang += (Display_Angle_Integer % 100) / 10;
-      adj_ang += Display_Angle_Integer % 10;*/
     }
     return adj_ang; 
 }
@@ -148,13 +138,13 @@ double get_simple_position(int j) {
       SPI.beginTransaction(SPISettings(250000, MSBFIRST, SPI_MODE3)); //250kHz aka 4micro seconds
       for (int i = 0; i < 8; i++) { //go through each byte and put it in the buffer
         buffer[i] = SPI.transfer(0x00);
-        Serial.println(String(j) + "   Buffer "+ String(i) + ":");
+        /*Serial.println(String(j) + "   Buffer "+ String(i) + ":");
         Serial.print("    ");
-        Serial.println(buffer[i], BIN);
+        Serial.println(buffer[i], BIN);*/
       }
       SPI.endTransaction();
       //String read_bisc(buffer);
-      Serial.println("\n");
+      //Serial.println("\n");
       switch (j) {
         case 0: //RESA30 1
           // 32-bit mode
@@ -221,9 +211,9 @@ void loop() {
         /*Serial.print(raw_angle);
         Serial.print("        ");
         Serial.println(adjusted_angle);*/
-        //print_bin(adjusted_angle);
+        print_bin(adjusted_angle);
       }
-
+      delay(cpsl);
     }
     //Serial.println(" ");
     delay(loop_period-4*cpsl);
