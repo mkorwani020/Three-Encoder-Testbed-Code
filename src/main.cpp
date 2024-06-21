@@ -145,7 +145,7 @@ double OffsetConvert(int pin, double pos) {
 double get_simple_position(int j) {
       byte buffer[8];
       setMode(active_codes[j]);
-      SPI.beginTransaction(SPISettings(250000, MSBFIRST, SPI_MODE3));
+      SPI.beginTransaction(SPISettings(250000, MSBFIRST, SPI_MODE3)); //250kHz aka 4micro seconds
       for (int i = 0; i < 8; i++) { //go through each byte and put it in the buffer
         buffer[i] = SPI.transfer(0x00);
         Serial.println(String(j) + "   Buffer "+ String(i) + ":");
