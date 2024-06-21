@@ -17,11 +17,17 @@ const byte active_codes[4] = {0b0111, 0b1011, 0b1101, 0b1110};
 unsigned long long position;
 unsigned long long positiona;
 unsigned long long positionb;
+unsigned long long orig_pos_deg;
 
 const int numBytes = 8;
 int currBit;
 int prevBit;
-int offset;
+double offset[4];
+int i;
+
+// first byte flag
+bool initBit = true; //turns false after first reading 
+
 
 void setup() {
   SPI.begin();
@@ -50,7 +56,7 @@ byte* transact(int index) {
   SPI.endTransaction();
   return buffer;
 }
-
+/*
 int get_start_bit(int index, byte* buffer) {     
   
   // setMode(active_codes[index]);
@@ -61,6 +67,7 @@ int get_start_bit(int index, byte* buffer) {
   // SPI.endTransaction();
   prevBit = 0;
   int count=0;
+  int pos = 0; 
   for (int i=0; i < numBytes; i++) {     // Iterate through each byte (left to right)
     for (int j=0; j < 8; j++) {          // Iterate through each bit  (left to right)
       currBit = bitRead(buffer[i], 7-j); // Read the current bit
@@ -68,8 +75,8 @@ int get_start_bit(int index, byte* buffer) {
         count+=1;
       }
       if (count>1) {                     // Check for two falling edges
-        offset = j+(j*i)+1;
-        Serial.println(offset);
+        pos = j+(j*i)+1;
+        //Serial.println(offset);
         break;                           // Yeet and skeet
       }
       prevBit=currBit;
@@ -78,9 +85,11 @@ int get_start_bit(int index, byte* buffer) {
       break;
     }
   }
-  return offset;
+  //pos = get_simple_position(index);
+  return pos;
 }
-
+*/
+/*
 unsigned long get_position(int index, int offset, byte* buffer) {
   byte bitmask = 0b11111111 >> offset;
   int bitsize;
@@ -105,77 +114,119 @@ unsigned long get_position(int index, int offset, byte* buffer) {
     }
   return position;
 }
+*/
 
-void get_simple_position(int j) {
+double OffsetConvert(int pin, double pos) {
+    //double Display_Angle_Integer;
+    double adj_ang;
+    if (pos >= offset[pin]) {
+      // in this case the subtraction will not go negative
+      // so we just go ahead and do the subtraction
+      adj_ang = pos - offset[pin];
+    }
+    else {
+      // in this case, the subtraction would go negative
+      // so we do an addition instead
+      adj_ang = pos + (360.0 - offset[pin]);
+    
+      //new angle with the offset up to 8 digits
+      /*adj_ang = Display_Angle_Integer / 10000000;
+      adj_ang += (Display_Angle_Integer % 10000000) / 1000000;
+      adj_ang += (Display_Angle_Integer % 1000000) / 100000;
+      adj_ang += (Display_Angle_Integer % 100000) / 10000;
+      adj_ang += (Display_Angle_Integer % 10000) / 1000;
+      adj_ang += (Display_Angle_Integer % 1000) / 100;
+      adj_ang += (Display_Angle_Integer % 100) / 10;
+      adj_ang += Display_Angle_Integer % 10;*/
+    }
+    return adj_ang; 
+}
+
+double get_simple_position(int j) {
       byte buffer[8];
-      char out[34];
       setMode(active_codes[j]);
-      // Serial.print(active_codes[j],2);
       SPI.beginTransaction(SPISettings(250000, MSBFIRST, SPI_MODE3));
-      for (int i = 0; i < 8; i++) {
-          buffer[i] = SPI.transfer(0x00);
+      for (int i = 0; i < 8; i++) { //go through each byte and put it in the buffer
+        buffer[i] = SPI.transfer(0x00);
+        Serial.println(String(j) + "   Buffer "+ String(i) + ":");
+        Serial.print("    ");
+        Serial.println(buffer[i], BIN);
       }
       SPI.endTransaction();
+      //String read_bisc(buffer);
+      Serial.println("\n");
       switch (j) {
-        case 0:
+        case 0: //RESA30 1
           // 32-bit mode
+          // Shift bits to eliminate ack and start and only accept position data
           positiona = ((unsigned long)(buffer[1]) << 24 | (unsigned long)(buffer[2]) << 16 | (unsigned long)(buffer[3]) << 8 | (unsigned long)(buffer[4]));
-          // Serial.print(position,BIN);
-          Serial.print(positiona/pow(2,32)*360.0, 8);
-          Serial.print(String(","));
-          // sprintf(out, "%lu, ", position);
-          // Serial.print(out);
+          return (positiona/pow(2,32)*360.0); // (binary value / counts per rev) * 360 => degrees, 8: how many decimal points to spit out
           break;
-        case 1:
+        case 1: //RESA30 2
           // 32-bit mode
           positionb = ((unsigned long)(buffer[1]) << 24 | (unsigned long)(buffer[2]) << 16 | (unsigned long)(buffer[3]) << 8 | (unsigned long)(buffer[4]));
+          // averaging logic from the Renishaw whitepaoer TODO: put that on the teams in "COTS_Datasheets/Renishaw"
           if(positionb>positiona) {
             position=positiona+positionb;
           }
           else {
             position=(positiona+positionb+0x100000000)&0x1ffffffff;
           }
-          
-          Serial.print(position/pow(2,33)*360.0, 8);
-          Serial.print(String(","));
-          // sprintf(out, "%lu, ", position);
-          // Serial.print(out);
+          return position/pow(2,33)*360.0;
           break;
-        case 2:
+        case 2: // Zettlex (funny because his BISSC is wrong, there is no start bit)
           // 21-bit mode
           position = ((unsigned long)(buffer[0] & 0b1) << 20 | (unsigned long)(buffer[1]) << 12 | (unsigned long)(buffer[2]) << 4 | (unsigned long)(buffer[3]) >> 4);
-          Serial.print(position/pow(2,21)*360.0, 8);
-          Serial.print(String(","));
-          // sprintf(out, "%lu, ", position);
-          // Serial.print(out);
+          // Serial.println(position, BIN);
+          return (position/pow(2,21)*360.0);
           break;
-        case 3:
+        case 3: // Netzer
           // 20-bit mode
           position = ((unsigned long)(buffer[0] & 0b111) << 17 | (unsigned long)(buffer[1]) << 9 | (unsigned long)(buffer[2]) << 1 | (unsigned long)(buffer[3]) >> 7);
-          Serial.print(position/pow(2,20)*360.0, 8);
-          Serial.println(String(","));
-          // sprintf(out, "%lu, ", position);
-          // Serial.print(out);
+          return (position/pow(2,20)*360.0); 
           break;
       }
 }
 
-void print_bin(unsigned long integer) {
-
+void print_bin(double integer) {
+    Serial.print(integer, 8);
+    Serial.print(String(","));
 }
 
 void loop() {
-    byte* buffer;
+    //byte* buffer;
+    double adjusted_angle;
+    double raw_angle;
     for (int j = 0; j < 4; j++) {
-      get_simple_position(j); 
-      // get_position_start_bit(j);
-      // Serial.println(j+String(", "));
-      // buffer = transact(j);
-      
-      // Serial.println(buffer[0],BIN);
-      // offset = get_start_bit(j, buffer);
-      // delay(cpsl);
+      if (initBit) { //only runs for first loop
+        offset[j] = get_simple_position(j);
+        i++;
+        if (i==8){
+          initBit = false;
+          Serial.print(String("flag set to false and offset angles are:  "));
+          Serial.print( offset[0] ,8);
+          Serial.print(String(", "));
+          Serial.print( offset[1], 8 );
+          Serial.print(String(", "));
+          Serial.print( offset[2], 8 );
+          Serial.print(String(", "));
+          Serial.println( offset[3], 8 );
+          Serial.println("FIRST ANGLE OUT:  ");
+        }
+      }
+      else {
+        raw_angle = get_simple_position(j);
+        adjusted_angle = OffsetConvert(j, raw_angle);
+        //print_bin(raw_angle);
+        /*Serial.print(raw_angle);
+        Serial.print("        ");
+        Serial.println(adjusted_angle);*/
+        //print_bin(adjusted_angle);
+      }
+
     }
-    // Serial.println("--");
-  delay(loop_period-4*cpsl);
+    //Serial.println(" ");
+    delay(loop_period-4*cpsl);
+    Serial.println("Clock:  " + String(loop_period-4*cpsl));
+ 
 }
