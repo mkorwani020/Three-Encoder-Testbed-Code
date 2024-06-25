@@ -211,11 +211,11 @@ void loop() {
       else {
         raw_angle = get_simple_position(j);
         adjusted_angle = OffsetConvert(j, raw_angle);
-        //print_bin(raw_angle);
+        print_bin(raw_angle);
         //Serial.print(raw_angle);
         //Serial.print("        ");
         //Serial.println(adjusted_angle);
-        print_bin(adjusted_angle);
+        //print_bin(adjusted_angle);
       }
       delay(cpsl);
     }
