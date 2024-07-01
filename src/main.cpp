@@ -27,7 +27,7 @@ int i;
 
 // first byte flag
 bool initBit = true; //turns false after first reading 
-bool test = false;
+bool test = true;
 
 void setup() {
   SPI.begin();
@@ -140,7 +140,7 @@ double get_simple_position(int j) {
         buffer[i] = SPI.transfer(0x00);
       }
       SPI.endTransaction();
-      //Serial.println(String(buffer[0], BIN)+String(buffer[1], BIN)+String(buffer[2], BIN)+String(buffer[3], BIN));
+      Serial.println(String(buffer[0], BIN)+String(buffer[1], BIN)+String(buffer[2], BIN)+String(buffer[3], BIN));
       switch (j) {
         case 0: //RESA30 1
           // 32-bit mode
@@ -184,14 +184,13 @@ void loop() {
     double adjusted_angle;
     double raw_angle;
     if(test){
-        raw_angle = get_simple_position(2);
-        adjusted_angle = OffsetConvert(2, raw_angle);
-        //print_bin(raw_angle);
+        raw_angle = get_simple_position(3);
+        adjusted_angle = OffsetConvert(3, raw_angle);
+        // print_bin(raw_angle);
         //Serial.println(raw_angle,8);
-        //Serial.print("        ");
         //Serial.println(adjusted_angle);
     }else{
-    for (int j = 2; j < 4; j++) {
+    for (int j = 0; j < 4; j++) {
       if (initBit) { //only runs for first loop
         offset[j] = get_simple_position(j);
         i++;
@@ -211,7 +210,7 @@ void loop() {
       else {
         raw_angle = get_simple_position(j);
         adjusted_angle = OffsetConvert(j, raw_angle);
-        //print_bin(raw_angle);
+        // print_bin(raw_angle);
         //Serial.print(raw_angle);
         //Serial.print("        ");
         //Serial.println(adjusted_angle);
