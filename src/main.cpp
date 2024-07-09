@@ -1,10 +1,10 @@
 #include <SPI.h>
 #include <Arduino.h>
 
-const int Renishaw1Pin = 29;
+const int Renishaw1Pin = 25;
 const int Renishaw2Pin = 27;
 const int ZettlexPin   = 23;
-const int NetzerPin    = 25;
+const int NetzerPin    = 29;
 
 const int loop_period  = 100;
 const int cpsl         = 3;
@@ -27,7 +27,7 @@ int i;
 
 // first byte flag
 bool initBit = true; //turns false after first reading 
-bool test = true;
+bool test = false;
 
 void setup() {
   SPI.begin();
@@ -140,7 +140,7 @@ double get_simple_position(int j) {
         buffer[i] = SPI.transfer(0x00);
       }
       SPI.endTransaction();
-      Serial.println(String(buffer[0], BIN)+String(buffer[1], BIN)+String(buffer[2], BIN)+String(buffer[3], BIN));
+      //Serial.println(String(buffer[0], BIN)+String(buffer[1], BIN)+String(buffer[2], BIN)+String(buffer[3], BIN));
       switch (j) {
         case 0: //RESA30 1
           // 32-bit mode
