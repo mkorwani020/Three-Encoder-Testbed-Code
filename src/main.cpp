@@ -1,20 +1,5 @@
 #include <config.h>
 
-unsigned long long position;
-unsigned long long positiona;
-unsigned long long positionb;
-unsigned long long position_adj;
-unsigned long long orig_pos_deg;
-
-const int numBytes = 8;
-int currBit;
-int prevBit;
-double offset[5];
-int i;
-
-// first byte flag
-bool initBit = true; //turns false after first reading 
-bool test = false;
 
 void setup() {
   SPI.begin();
@@ -59,7 +44,6 @@ double OffsetConvert(int pin, double pos) {
     }
     return adj_ang; 
 }
-
 
 unsigned long long get_pos_start_bit(int index, byte* buffer) {    
   unsigned long long position;
@@ -126,6 +110,7 @@ double get_position(int j) {
 
 double get_simple_position(int j) {
       byte buffer[5];
+      byte bitmask = 0b11111111 >> bit_offsets[j];
       setMode(active_codes[j]);
       SPI.beginTransaction(SPISettings(250000, MSBFIRST, SPI_MODE3)); //250kHz aka 4micro seconds
       for (int i = 0; i < sizeof(buffer); i++) { //go through each byte and put it in the buffer
@@ -138,6 +123,16 @@ double get_simple_position(int j) {
           // 32-bit mode
           // Shift bits to eliminate ack and start and only accept position data
           positiona = ((unsigned long)(buffer[1]) << 24 | (unsigned long)(buffer[2]) << 16 | (unsigned long)(buffer[3]) << 8 | (unsigned long)(buffer[4]));
+          // positiona = (unsigned long)(buffer[0] & bitmask) << resolution[j]-(8-bit_offsets[j]);
+          // for (int i = 1; i < 5; i++) {
+          //   int shift = resolution[j]-(8-bit_offsets[j])-8*i;
+          //   if (shift >= 0) {
+          //     positiona = positiona | (unsigned long)(buffer[i]) << shift;
+          //   }
+          //   else {
+          //     positiona = positiona | (unsigned long)(buffer[i]) >> -1*shift;
+          //   }
+          // }          
           return (positiona/pow(2,32)*360.0)* direction[j]; // (binary value / counts per rev) * 360 => degrees, 8: how many decimal points to spit out
           break;
         case 1: //RESA30 2
@@ -182,6 +177,8 @@ void loop() {
     double adjusted_angle;
     double raw_angle;
     double avrg_offset;
+
+    int k;
     if(test){
         raw_angle = get_simple_position(3);
         adjusted_angle = OffsetConvert(3, raw_angle);
@@ -190,9 +187,10 @@ void loop() {
         //Serial.println(adjusted_angle);
     }else{
     for (int j = 0; j < 4; j++) {
+      k = order[j];
       if (initBit) { //only runs for first loop
-        offset[j] = get_simple_position(j);
-        if (j==1) {
+        offset[k] = get_simple_position(k);
+        if (k==1) {
           offset[4] = renishaw_adjustment();
         }
         i++;
@@ -202,10 +200,10 @@ void loop() {
         }
       }
       else {
-        raw_angle = get_simple_position(j);
-        adjusted_angle = OffsetConvert(j, raw_angle);
+        raw_angle = get_simple_position(k);
+        adjusted_angle = OffsetConvert(k, raw_angle);
         print_bin(adjusted_angle, j);
-        if (j==1) {
+        if (k==1) {
           raw_angle = renishaw_adjustment();
           adjusted_angle = OffsetConvert(4, raw_angle);
           print_bin(adjusted_angle, j);
